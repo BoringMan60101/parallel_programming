@@ -1,0 +1,221 @@
+/*
+ // Code description //
+
+ This code solves the partial derriviatives equation:
+ \frac{\partial U}{\partial t}
+ =
+ \frac{\partial^2 U}{\partial x^2}
+ +
+ \frac{\partial^2 U}{\partial y^2}
+ +
+ f(x, y, t)
+
+ Where computational domain D is a square: 0 <= x <= 1, 0 <= y <= 1
+
+ Only Dirichlet boundary condition is supported
+ // ***************************************************************** //
+
+ // Additional information //
+ Compiling g++ [-Wall] -o serial.out
+
+ Exectuing variants:
+ 1) Using default values for 'm' and 'eps'
+    h = 1/m - spaitial step, 'eps' is used in Guass-Seidel
+
+    ./serial.out
+
+ 2) Set 'm'=20 form command line
+    ./serial 20
+
+ 3) Set 'm'=20  and 'eps'=0.001 form command line
+    for 'eps' values only real number format is supported
+    ./serial 20 0.001
+ // ***************************************************************** //
+*/
+
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+
+
+// Test function: U_an = x^2 + y^2 + 4t
+// Initial condition at zero time monent //
+double U_init(double x, double y) { return x*x + y*y; }
+// ***************************************************************** //
+
+// Boundary conditions and source term //
+double U_minX(double y, double t) { return y*y + 4.0*t; }
+double U_maxX(double y, double t) { return 1.0 + y*y + 4.0*t; }
+double U_minY(double x, double t) { return x*x + 4.0*t; }
+double U_maxY(double x, double t) { return 1.0 + x*x + 4.0*t; }
+double Source(double x, double y, double t) { return 0.0; }
+// ***************************************************************** //
+
+// Each one of 'norms' is calculated only for internal points (L_1 <= L_2 <= L_inf)
+double norm_L_1(double const * U1, double const * U0, const int m);
+double norm_L_2(double const * U1, double const * U0, const int m);
+double norm_L_inf(double const * U1, double const * U0, const int m);
+void printDataToFile(double const * U, const int m, const double time);
+// ***************************************************************** //
+
+
+int main(const int argc, const char ** argv) {
+    // Initializing constants, related to spatial and temporal discretization //
+    #include "setConstants.CPP"
+
+    // Initializing iterative solution parameters //
+    const int itersLimit = 1000;
+    const double eps = argc > 2 ? atof(argv[2]) : 1e-10; // Only real numbers format for 'eps'
+    double norm = 2.0 * eps; // Actual value of 'norm' is calculated in Gauss-Seidel loop
+    const double C1 = 1.0/(h*h);
+    const double C2 = 4.0/(h*h) + 1.0/dt;
+    const double C3 = C1/C2;
+    // ***************************************************************** //
+
+    // Creating fields //
+    // U -- contains field values for all time steps
+    // U0 and U1[M] -- auxilary arrays
+    #include "createFields.CPP"
+
+    // Setting initial field values at time = 0 //
+    for(int i = 0; i <= m; i++) // 'Goes' along X direction
+        for(int j = 0; j <= m; j++) // 'Goes' along Y direction
+            U[0][i*(m+1) + j] = U_init(i*h, j*h);
+    printDataToFile(U[0], m, 0.0);
+    // ***************************************************************** //
+
+
+    // Solving for each time step with Gauss-Seidel method //
+    for(int t = 1; t <= Nt; t++)
+    {
+        // Boundary condtions //
+        for(int i = 0; i <= m; i++)
+        {
+            int idx1 = i; // x = 0
+            U0[idx1] = U1[idx1] = U_minX(i*h, t*dt);
+
+            int idx2 = m*(m+1) + i; // x = 1
+            U0[idx2] = U1[idx2] = U_maxX(i*h, t*dt);
+
+            int idx3 = i*(m+1); // y = 0
+            U0[idx3] = U1[idx3] = U_minY(i*h, t*dt);
+
+            int idx4 = i*(m+1) + m; // y = 1
+            U0[idx4] = U1[idx4] = U_maxY(i*h, t*dt);
+        }
+        // ***************************************************************** //
+
+        // Initial approximation for the first iteration of Gauss-Seidel method //
+        for(int i = 1; i < m; i++)
+            for(int j = 1; j < m; j++)
+            {
+                int idx = i*(m+1) + j;
+                U0[idx] = U[t-1][idx];
+            }
+        // ***************************************************************** //
+
+        // Iterative solution for current time step //
+        norm = 2.0 * eps;
+        for(int iter = 1; iter <= itersLimit && norm > eps; iter++)
+        {
+            for(int i = 1; i < m; i++)
+                for(int j = 1; j < m; j++)
+                {
+                    int idx = i*(m+1) + j;
+                    double sum1 = (U1[idx - m - 1] + U1[idx - 1]) * C3;
+                    double sum2 = (U0[idx + m + 1] + U0[idx + 1]) * C3;
+                    double sum3 = (U[t-1][idx]/dt + Source(i*h, j*h, t*dt)) / C2;
+                    U1[idx] = sum1 + sum2 + sum3;
+                }
+
+            norm = norm_L_1(U1, U0, m);
+
+            for(int i = 1; i < m; i++)
+                for(int j = 1; j < m; j++)
+                {
+                    int idx = i*(m+1) + j;
+                    U0[idx] = U1[idx];
+                }
+
+             if(iter == itersLimit)
+                printf("At time:%lf reached iterations limit (%d) with norm:%g\n", t*dt, itersLimit, norm);
+        }
+        // ***************************************************************** //
+
+        // Saving found solution //
+        for(int i = 0; i <= m; i++)
+            for(int j = 0; j <= m; j++)
+            {
+                int idx = i*(m+1) + j;
+                U[t][idx] = U1[idx];
+            }
+        //printDataToFile(U[t], m, t*dt);
+    }
+
+    // Saving calculated data for time 'T_final' to a text file //
+    printDataToFile(U[Nt], m, Nt*dt);
+
+    // Deallocating memory //
+    for(int t = 0; t <= Nt; t++)
+        delete [] U[t];
+    delete [] U;
+    delete [] U0;
+    delete [] U1;
+
+    return 0;
+}
+
+
+// Each one of 'norms' is calculated only for internal points
+double norm_L_1(double const * U1, double const * U0, const int m) {
+    double norm = 0.0;
+    for(int i = 1; i < m; i++)
+        for(int j = 1; j < m; j++)
+        {
+            int idx = i*(m+1) + j;
+            norm += fabs(U1[idx] - U0[idx]);
+        }
+    return norm;
+}
+double norm_L_2(double const * U1, double const * U0, const int m) {
+    double norm = 0.0;
+    for(int i = 1; i < m; i++)
+        for(int j = 1; j < m; j++)
+        {
+            int idx = i*(m+1) + j;
+            norm += (U1[idx] - U0[idx]) * (U1[idx] - U0[idx]);
+        }
+    return sqrt(norm);
+}
+double norm_L_inf(double const * U1, double const * U0, const int m) {
+    double norm = 0.0;
+    for(int i = 1; i < m; i++)
+        for(int j = 1; j < m; j++)
+        {
+            int idx = i*(m+1) + j;
+            double dif = fabs(U1[idx] - U0[idx]);
+            if(dif > norm)
+                norm = dif;
+        }
+    return norm;
+}
+// ***************************************************************** //
+
+
+void printDataToFile(double const * U, const int m, const double time) {
+    char timeName [32];
+    sprintf(timeName, "%lf", time);
+
+    FILE * fp = fopen(timeName, "w");
+    if(fp == nullptr)
+    {
+        fprintf(stderr, "Error with opening file to write data at time: %lf\n", time);
+        return;
+    }
+
+    const double h = 1.0/m;
+    for(int i = 0; i <= m; i++)
+        for(int j = 0; j <= m; j++)
+            fprintf(fp, "%lf %lf %lf\n", i*h, j*h, U[i*(m+1) + j]);
+    fclose(fp);
+}
