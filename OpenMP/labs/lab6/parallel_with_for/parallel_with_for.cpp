@@ -19,8 +19,8 @@ double Source(double x, double y, double t) { return 0.0; }
 // Norm is calculated only for internal points (L_1 <= L_2 <= L_inf)
 // All functions are being executed in parallel mode
 double norm_L_1(double const * U1, double const * U0, const int m);
-double norm_L_2(double const * U1, double const * U0, const int m);
-double norm_L_inf(double const * U1, double const * U0, const int m);
+//double norm_L_2(double const * U1, double const * U0, const int m);
+//double norm_L_inf(double const * U1, double const * U0, const int m);
 void printDataToFile(double const * U, const int m, const double time);
 // ***************************************************************** //
 
@@ -30,37 +30,31 @@ int main(const int argc, const char ** argv) {
 
     omp_set_nested(true);
 
-    // Initializing constants //
+    // Initializing:
+    // Constants, related to spatial and temporal discretization
+    // Parameters for iterative solution with Gauss-Seidel method
     #include "setConstants.CPP"
 
-    // Iterative solution parameters //
-    const int itersLimit = 1000;
-    const double eps = argc > 2 ? atof(argv[2]) : 1e-10; // Only real numbers format for 'eps'
-    double norm = 2.0 * eps; // Actual value of 'norm' is calculated in Gauss-Seidel loop
-    const double C1 = 1.0/(h*h);
-    const double C2 = 4.0/(h*h) + 1.0/dt;
-    const double C3 = C1/C2;
-    // ***************************************************************** //
-
-    //double U[Nt+1][M], U0[M], U1[M];
+    // Creating fields:
+    // U -- contains field values for all time steps
+    // U0 and U1[M] -- auxilary arrays
     #include "createFields.CPP"
 
-
     // Initial conditions //
-    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for
     for(int i = 0; i <= m; i++) // 'Goes' along X direction
         for(int j = 0; j <= m; j++) // 'Goes' along Y direction
             U[0][i*(m+1) + j] = U_init(i*h, j*h);
-    printDataToFile(U[0], m, 0.0);
+    //printDataToFile(U[0], m, 0.0);
 
 
     // Solving for each time step with Gauss-Seidel method //
     for(int t = 1; t <= Nt; t++)
     {
         // Boundary condtions and initial approximation //
-        #pragma omp parallel shared(U, U0, U1, norm)
+        #pragma omp parallel
         {
-            #pragma omp for nowait // x = 0
+            #pragma omp for nowait
             for(int i = 0; i <= m; i++)
             {
                 int idx1 = i; // x = 0
@@ -87,11 +81,12 @@ int main(const int argc, const char ** argv) {
                 }
         } // End parallel region
 
-        // Iterative solution for current time step //
+
+        // Iterative solution (Gauss-Seidel method) for current time step //
         norm = 2.0 * eps;
         for(int iter = 1; iter <= itersLimit && norm > eps; iter++)
         {
-            #pragma omp parallel shared(norm)
+            #pragma omp parallel
             {
                 // 'Black' cells
                 #pragma omp for
@@ -123,7 +118,6 @@ int main(const int argc, const char ** argv) {
                     norm = norm_L_1(U1, U0, m);
                     if(iter == itersLimit)
                         printf("At time:%lf iterations limit (%d) was reached, final \'norm\':%g\n", t*dt, itersLimit, norm);
-                    #pragma omp flush
                 }
 
 
@@ -143,6 +137,7 @@ int main(const int argc, const char ** argv) {
         } // End 'Gauss-Seidel' loop for this time step
 
         // Saving found solution //
+        #pragma omp parallel for
         for(int i = 0; i <= m; i++)
             for(int j = 0; j <= m; j++)
             {
@@ -154,7 +149,7 @@ int main(const int argc, const char ** argv) {
 
 
     // Write data at last time step
-    printDataToFile(U[Nt], m, Nt*dt);
+    //printDataToFile(U[Nt], m, Nt*dt);
 
     // Deallocating memory //
     for(int t = 0; t <= Nt; t++)
@@ -180,6 +175,7 @@ double norm_L_1(double const * U1, double const * U0, const int m) {
         }
     return norm;
 }
+/*
 double norm_L_2(double const * U1, double const * U0, const int m) {
     double norm = 0.0;
     #pragma omp parallel for
@@ -191,6 +187,7 @@ double norm_L_2(double const * U1, double const * U0, const int m) {
         }
     return sqrt(norm);
 }
+
 double norm_L_inf(double const * U1, double const * U0, const int m) {
     double norm = 0.0;
     #pragma omp parallel for
@@ -204,6 +201,7 @@ double norm_L_inf(double const * U1, double const * U0, const int m) {
         }
     return norm;
 }
+*/
 // ***************************************************************** //
 
 

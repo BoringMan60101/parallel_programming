@@ -1,20 +1,27 @@
 #!/bin/bash
 
+# $1 -- 'm' value, which is used is used to define a unirom mesh in the main program
+
+# How may times to run the program to estimate execution time
 launchesNumber=5
-g++ -fopenmp serial.cpp -o "serial.out"
 
+# Compiling auxilary program, that computes real numbers
+g++ ../auxilary/countFloats.cpp -o countFloats.out
+
+# Compiling main program
+g++ serial.cpp -o "serial.out"
+
+# Run the program several times, to find out average execution time
 start_T=$(date +%s.%N)
-
 for((r = 1; r <= launchesNumber; r++))
 do
-# $1 is 'm' value, $2 is 'eps' value, look commnets in the source code
-	./serial.out $1 $2
+	./serial.out $1
 done
-
 end_T=$(date +%s.%N)
-totalTime=$(./countFloats $end_T "-" $start_T)
-avgExeTime=$(./countFloats $totalTime "/" $launchesNumber)
 
+# Output averaged estimation
+totalTime=$(./countFloats.out $end_T "-" $start_T)
+avgExeTime=$(./countFloats.out $totalTime "/" $launchesNumber)
 echo "Estimated execution time (serial): $avgExeTime"
-
 rm serial.out
+rm countFloats.out

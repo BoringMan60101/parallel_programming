@@ -1,38 +1,3 @@
-/*
- // Code description //
-
- This code solves the partial derriviatives equation:
- \frac{\partial U}{\partial t}
- =
- \frac{\partial^2 U}{\partial x^2}
- +
- \frac{\partial^2 U}{\partial y^2}
- +
- f(x, y, t)
-
- Where computational domain D is a square: 0 <= x <= 1, 0 <= y <= 1
-
- Only Dirichlet boundary condition is supported
- // ***************************************************************** //
-
- // Additional information //
- Compiling g++ [-Wall] -o serial.out
-
- Exectuing variants:
- 1) Using default values for 'm' and 'eps'
-    h = 1/m - spaitial step, 'eps' is used in Guass-Seidel
-
-    ./serial.out
-
- 2) Set 'm'=20 form command line
-    ./serial 20
-
- 3) Set 'm'=20  and 'eps'=0.001 form command line
-    for 'eps' values only real number format is supported
-    ./serial 20 0.001
- // ***************************************************************** //
-*/
-
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
@@ -53,26 +18,19 @@ double Source(double x, double y, double t) { return 0.0; }
 
 // Each one of 'norms' is calculated only for internal points (L_1 <= L_2 <= L_inf)
 double norm_L_1(double const * U1, double const * U0, const int m);
-double norm_L_2(double const * U1, double const * U0, const int m);
-double norm_L_inf(double const * U1, double const * U0, const int m);
+//double norm_L_2(double const * U1, double const * U0, const int m);
+//double norm_L_inf(double const * U1, double const * U0, const int m);
 void printDataToFile(double const * U, const int m, const double time);
 // ***************************************************************** //
 
 
 int main(const int argc, const char ** argv) {
-    // Initializing constants, related to spatial and temporal discretization //
+    // Initializing:
+    // Constants, related to spatial and temporal discretization
+    // Parameters for iterative solution with Gauss-Seidel method
     #include "setConstants.CPP"
 
-    // Initializing iterative solution parameters //
-    const int itersLimit = 1000;
-    const double eps = argc > 2 ? atof(argv[2]) : 1e-10; // Only real numbers format for 'eps'
-    double norm = 2.0 * eps; // Actual value of 'norm' is calculated in Gauss-Seidel loop
-    const double C1 = 1.0/(h*h);
-    const double C2 = 4.0/(h*h) + 1.0/dt;
-    const double C3 = C1/C2;
-    // ***************************************************************** //
-
-    // Creating fields //
+    // Creating fields:
     // U -- contains field values for all time steps
     // U0 and U1[M] -- auxilary arrays
     #include "createFields.CPP"
@@ -81,7 +39,7 @@ int main(const int argc, const char ** argv) {
     for(int i = 0; i <= m; i++) // 'Goes' along X direction
         for(int j = 0; j <= m; j++) // 'Goes' along Y direction
             U[0][i*(m+1) + j] = U_init(i*h, j*h);
-    printDataToFile(U[0], m, 0.0);
+    //printDataToFile(U[0], m, 0.0);
     // ***************************************************************** //
 
 
@@ -153,7 +111,7 @@ int main(const int argc, const char ** argv) {
     }
 
     // Saving calculated data for time 'T_final' to a text file //
-    printDataToFile(U[Nt], m, Nt*dt);
+    //printDataToFile(U[Nt], m, Nt*dt);
 
     // Deallocating memory //
     for(int t = 0; t <= Nt; t++)
@@ -177,6 +135,7 @@ double norm_L_1(double const * U1, double const * U0, const int m) {
         }
     return norm;
 }
+/*
 double norm_L_2(double const * U1, double const * U0, const int m) {
     double norm = 0.0;
     for(int i = 1; i < m; i++)
@@ -187,6 +146,7 @@ double norm_L_2(double const * U1, double const * U0, const int m) {
         }
     return sqrt(norm);
 }
+
 double norm_L_inf(double const * U1, double const * U0, const int m) {
     double norm = 0.0;
     for(int i = 1; i < m; i++)
@@ -199,6 +159,7 @@ double norm_L_inf(double const * U1, double const * U0, const int m) {
         }
     return norm;
 }
+*/
 // ***************************************************************** //
 
 

@@ -1,0 +1,29 @@
+Code description
+
+This code solves the partial derriviatives equation:
+\frac{\partial U}{\partial t}
+=
+\frac{\partial^2 U}{\partial x^2}
++
+\frac{\partial^2 U}{\partial y^2}
++
+f(x, y, t)
+
+Where computational domain D is a square: 0 <= x <= 1, 0 <= y <= 1
+
+Only Dirichlet boundary condition is supported
+
+
+
+Compiling g++ [-Wall] -o serial.out
+
+
+
+Exectuing variants:
+1) Using default value for 'm'
+   h = 1/m - spaitial step
+
+   ./serial.out
+
+2) Set 'm'=210 form command line
+   ./serial 10

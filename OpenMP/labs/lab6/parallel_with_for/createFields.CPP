@@ -1,5 +1,6 @@
 //double U[Nt+1][M], U0[M], U1[M];
-
+// U -- contains field values for all time steps
+// U0 and U1[M] -- auxilary arrays
 double ** U = new double * [Nt + 1];
 if(U == nullptr)
 {

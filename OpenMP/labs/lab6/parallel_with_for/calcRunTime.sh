@@ -1,22 +1,33 @@
 #!/bin/bash
 
+# Necessary arguments:
+# $1 -- 'm' value, which is used is used to define a unirom mesh in the main program
+# $2 -- number of theards for OpenMP parallelism
+
+# How may times to run the program to estimate execution time
 launchesNumber=5
-export OMP_NUM_THREADS=$3
-export OMP_WAIT_POLICY="active"
+
+# Compiling auxilary program, that computes real numbers
+g++ ../auxilary/countFloats.cpp -o countFloats.out
+
+# Compiling main program
+export OMP_NUM_THREADS=$2
+#export OMP_WAIT_POLICY="active"
+export OMP_WAIT_POLICY="passive"
 g++ -fopenmp parallel_with_for.cpp -o "parallel_for.out"
 
+# Run the program several times, to find out average execution time
 start_T=$(date +%s.%N)
-
 for((r = 1; r <= launchesNumber; r++))
 do
-# $1 is 'm' value, $2 is 'eps' value, look commnets in the source code
-	./parallel_for.out $1 $2
+	./parallel_for.out $1
 done
-
 end_T=$(date +%s.%N)
-totalTime=$(./countFloats $end_T "-" $start_T)
-avgExeTime=$(./countFloats $totalTime "/" $launchesNumber)
 
+
+# Output averaged estimation
+totalTime=$(./countFloats.out $end_T "-" $start_T)
+avgExeTime=$(./countFloats.out $totalTime "/" $launchesNumber)
 echo "Estimated execution time (parallel_for): $avgExeTime"
-
 rm parallel_for.out
+rm countFloats.out

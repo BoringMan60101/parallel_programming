@@ -1,3 +1,10 @@
+// *******************    Description   **************************** //
+/*
+ This is an auxilary utilite that is used when
+ it is need to make an arithmetic operation with two real numbers
+*/
+// ***************************************************************** //
+
 #include <cstdio>
 #include <cstdlib>
 

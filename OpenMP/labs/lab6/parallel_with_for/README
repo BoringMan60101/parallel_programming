@@ -1,34 +1,31 @@
-// Code description //
- This code is using OpenMP standart to perform parallel execution
- Threads number is taken from standart envinronment variable "OMP_NUM_THREADS"
- It solves the partial derriviatives equation:
- \frac{\partial U}{\partial t}
- =
- \frac{\partial^2 U}{\partial x^2}
- +
- \frac{\partial^2 U}{\partial y^2}
- +
- f(x, y, t)
+Code description
 
- Where computational domain D is a square: 0 <= x <= 1, 0 <= y <= 1
+This code is using OpenMP standart to perform parallel execution
+Threads number is taken from standart envinronment variable "OMP_NUM_THREADS"
+It solves the partial derriviatives equation:
+\frac{\partial U}{\partial t}
 
- Only Dirichlet boundary condition is supported
- // ***************************************************************** //
+\frac{\partial^2 U}{\partial x^2}
++
+\frac{\partial^2 U}{\partial y^2}
++
+f(x, y, t)
 
- // Additional information //
- Compiling g++ -fopenmp [-Wall] -o serial.out
+Where computational domain D is a square: 0 <= x <= 1, 0 <= y <= 1
 
- Exectuing variants:
- 1) Using default values for 'm' and 'eps'
-    h = 1/m - spaitial step, 'eps' is used in Guass-Seidel
+Only Dirichlet boundary condition is supported
 
-    ./serial.out
 
- 2) Set 'm'=20 form command line
-    ./serial 20
 
- 3) Set 'm'=20  and 'eps'=0.001 form command line
-    for 'eps' values only real number format is supported
-    ./serial 20 0.001
- // ***************************************************************** //
+Compiling g++ -fopenmp [-Wall] -o parallel_for.out
+
+
+
+Exectuing variants:
+1) Using default values for 'm', h = 1/m - spaitial step
+
+   ./parallel_for.out
+
+2) Set 'm'=10 form command line
+   ./parallel_for 10
 
