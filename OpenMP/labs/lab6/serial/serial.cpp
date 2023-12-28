@@ -39,7 +39,7 @@ int main(const int argc, const char ** argv) {
     for(int i = 0; i <= m; i++) // 'Goes' along X direction
         for(int j = 0; j <= m; j++) // 'Goes' along Y direction
             U[0][i*(m+1) + j] = U_init(i*h, j*h);
-    //printDataToFile(U[0], m, 0.0);
+    printDataToFile(U[0], m, 0.0);
     // ***************************************************************** //
 
 
@@ -111,7 +111,7 @@ int main(const int argc, const char ** argv) {
     }
 
     // Saving calculated data for time 'T_final' to a text file //
-    //printDataToFile(U[Nt], m, Nt*dt);
+    printDataToFile(U[Nt], m, Nt*dt);
 
     // Deallocating memory //
     for(int t = 0; t <= Nt; t++)

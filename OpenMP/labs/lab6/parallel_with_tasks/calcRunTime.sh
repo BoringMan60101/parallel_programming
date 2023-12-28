@@ -12,7 +12,7 @@ g++ ../auxilary/countFloats.cpp -o countFloats.out
 
 # Compiling main program
 export OMP_NUM_THREADS=$2
-export OMP_WAIT_POLICY="active"
+export OMP_WAIT_POLICY="passive"
 g++ -fopenmp parallel_with_tasks.cpp -o "parallel_tasks.out"
 
 # Run the program several times, to find out average execution time
@@ -27,6 +27,6 @@ end_T=$(date +%s.%N)
 # Output averaged estimation
 totalTime=$(./countFloats.out $end_T "-" $start_T)
 avgExeTime=$(./countFloats.out $totalTime "/" $launchesNumber)
-echo "Estimated execution time (parallel_tasks): $avgExeTime"
+echo "Average run time (parallel_tasks m=$1 OMP_NUM_THREADS=$2): $avgExeTime"
 rm parallel_tasks.out
 rm countFloats.out

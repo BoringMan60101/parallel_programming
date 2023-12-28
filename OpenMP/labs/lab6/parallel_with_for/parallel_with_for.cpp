@@ -45,7 +45,7 @@ int main(const int argc, const char ** argv) {
     for(int i = 0; i <= m; i++) // 'Goes' along X direction
         for(int j = 0; j <= m; j++) // 'Goes' along Y direction
             U[0][i*(m+1) + j] = U_init(i*h, j*h);
-    //printDataToFile(U[0], m, 0.0);
+    printDataToFile(U[0], m, 0.0);
 
 
     // Solving for each time step with Gauss-Seidel method //
@@ -136,6 +136,7 @@ int main(const int argc, const char ** argv) {
             } // End parallel region
         } // End 'Gauss-Seidel' loop for this time step
 
+
         // Saving found solution //
         #pragma omp parallel for
         for(int i = 0; i <= m; i++)
@@ -144,12 +145,11 @@ int main(const int argc, const char ** argv) {
                 int idx = i*(m+1) + j;
                 U[t][idx] = U1[idx];
             }
-
     } // End time steps loop
 
 
     // Write data at last time step
-    //printDataToFile(U[Nt], m, Nt*dt);
+    printDataToFile(U[Nt], m, Nt*dt);
 
     // Deallocating memory //
     for(int t = 0; t <= Nt; t++)

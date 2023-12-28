@@ -27,7 +27,7 @@ void printDataToFile(double const * U, const int m, const double time);
 
 
 int main(const int argc, const char ** argv) {
-    omp_set_nested(1);
+    omp_set_nested(true);
 
     // Initializing:
     // Constants, related to spatial and temporal discretization
@@ -39,94 +39,97 @@ int main(const int argc, const char ** argv) {
     // U0 and U1[M] -- auxilary arrays
     #include "createFields.CPP"
 
-    // Setting initial field values at time = 0 //
-    #pragma omp parallel for shared(U, U1, U0, norm)
-        for(int i = 0; i <= m; i++)
-            for(int j = 0; j <= m; j++)
-                U[0][i*(m+1) + j] = U_init(i*h, j*h);
-    //printDataToFile(U[0], m, 0.0);
-    // ***************************************************************** //
+
+    #pragma omp parallel
+    #pragma omp single
+    {
+        // Setting initial field values at time = 0 //
+        #pragma omp taskloop
+            for(int i = 0; i <= m; i++)
+                for(int j = 0; j <= m; j++)
+                    U[0][i*(m+1) + j] = U_init(i*h, j*h);
+        printDataToFile(U[0], m, 0.0);
+        // ***************************************************************** //
 
 
-    // Solving for each time step with Gauss-Seidel method //
-    #pragma omp parallel shared(U, U1, U0, norm)
-        #pragma omp single
-            for(int t = 1; t <= Nt; t++)
+        // Solving for each time step with Gauss-Seidel method //
+        for(int t = 1; t <= Nt; t++)
+        {
+            // Boundary condtions //
+            #pragma omp taskloop
+            for(int i = 0; i <= m; i++)
             {
-                // Boundary condtions //
-                #pragma omp taskloop shared(U, U1, U0, norm) // x = 0
-                for(int i = 0; i <= m; i++)
-                {
-                    int idx1 = i; // x = 0
-                    U0[idx1] = U1[idx1] = U_minX(i*h, t*dt);
+                int idx1 = i; // x = 0
+                U0[idx1] = U1[idx1] = U_minX(i*h, t*dt);
 
-                    int idx2 = m*(m+1) + i; // x = 1
-                    U0[idx2] = U1[idx2] = U_maxX(i*h, t*dt);
+                int idx2 = m*(m+1) + i; // x = 1
+                U0[idx2] = U1[idx2] = U_maxX(i*h, t*dt);
 
-                    int idx3 = i*(m+1); // y = 0
-                    U0[idx3] = U1[idx3] = U_minY(i*h, t*dt);
+                int idx3 = i*(m+1); // y = 0
+                U0[idx3] = U1[idx3] = U_minY(i*h, t*dt);
 
-                    int idx4 = i*(m+1) + m; // y = 1
-                    U0[idx4] = U1[idx4] = U_maxY(i*h, t*dt);
-                }
-                // ***************************************************************** //
+                int idx4 = i*(m+1) + m; // y = 1
+                U0[idx4] = U1[idx4] = U_maxY(i*h, t*dt);
+            }
+            // ***************************************************************** //
 
 
-                // Iterative solution (Gauss-Seidel method) for current time step //
-                norm = 2.0 * eps;
-                for(int iter = 1; iter <= itersLimit && norm > eps; iter++)
-                {
-                    #pragma omp taskloop shared(U, U1, U0, norm) // 'Black' cells
-                    for(int i = 1; i < m; i++)
-                        for(int j = 2 - (i%2); j < m; j += 2)
-                        {
-                            int idx = i*(m+1) + j;
-                            double sum1 = (U0[idx - m - 1] + U0[idx - 1]) * C3;
-                            double sum2 = (U0[idx + m + 1] + U0[idx + 1]) * C3;
-                            double sum3 = (U[t-1][idx]/dt + Source(i*h, j*h, t*dt)) / C2;
-                            U1[idx] = sum1 + sum2 + sum3;
-                        }
-
-                    #pragma omp taskloop shared(U, U1, U0, norm) // 'Red' cells
-                    for(int i = 1; i < m; i++)
-                        for(int j = 1 + (i%2); j < m; j += 2)
-                        {
-                            int idx = i*(m+1) + j;
-                            double sum1 = (U1[idx - m - 1] + U1[idx - 1]) * (C1/C2);
-                            double sum2 = (U1[idx + m + 1] + U1[idx + 1]) * (C1/C2);
-                            double sum3 = (U[t-1][idx]/dt + Source(i*h, j*h, t*dt))/C2;
-                            U1[idx] = sum1 + sum2 + sum3;
-                        }
-
-                    norm = norm_L_1(U1, U0, m);
-                    if(iter == itersLimit)
-                        printf("At time:%lf iterations limit (%d) was reached, final \'norm\':%g\n", t*dt, itersLimit, norm);
-
-                    // Updating values in solution vector
-                    #pragma omp taskloop shared(U, U1, U0)
-                    for(int i = 1; i < m; i++)
-                        for(int j = 1; j < m; j++)
-                        {
-                            int idx = i*(m+1) + j;
-                            U0[idx] = U1[idx];
-                        }
-                } // End Gauss-Seidel loop for the current time step
-
-                // Saving found solution //
-                #pragma omp parallel for shared(U, U1, U0)
-                for(int i = 0; i <= m; i++)
-                    for(int j = 0; j <= m; j++)
+            // Iterative solution (Gauss-Seidel method) for current time step //
+            norm = 2.0 * eps;
+            for(int iter = 1; iter <= itersLimit && norm > eps; iter++)
+            {
+                #pragma omp taskloop // 'Black' cells
+                for(int i = 1; i < m; i++)
+                    for(int j = 2 - (i%2); j < m; j += 2)
                     {
                         int idx = i*(m+1) + j;
-                        U[t][idx] = U1[idx];
+                        double sum1 = (U0[idx - m - 1] + U0[idx - 1]) * C3;
+                        double sum2 = (U0[idx + m + 1] + U0[idx + 1]) * C3;
+                        double sum3 = (U[t-1][idx]/dt + Source(i*h, j*h, t*dt)) / C2;
+                        U1[idx] = sum1 + sum2 + sum3;
                     }
 
-                //printDataToFile(U[t], m, t*dt);
-            } // time steps loop (inside 'single' directive)
+                #pragma omp taskloop // 'Red' cells
+                for(int i = 1; i < m; i++)
+                    for(int j = 1 + (i%2); j < m; j += 2)
+                    {
+                        int idx = i*(m+1) + j;
+                        double sum1 = (U1[idx - m - 1] + U1[idx - 1]) * (C1/C2);
+                        double sum2 = (U1[idx + m + 1] + U1[idx + 1]) * (C1/C2);
+                        double sum3 = (U[t-1][idx]/dt + Source(i*h, j*h, t*dt))/C2;
+                        U1[idx] = sum1 + sum2 + sum3;
+                    }
+
+                norm = norm_L_1(U1, U0, m);
+                if(iter == itersLimit)
+                    printf("At time:%lf iterations limit (%d) was reached, final \'norm\':%g\n", t*dt, itersLimit, norm);
+
+                // Updating values in solution vector
+                #pragma omp taskloop
+                for(int i = 1; i < m; i++)
+                    for(int j = 1; j < m; j++)
+                    {
+                        int idx = i*(m+1) + j;
+                        U0[idx] = U1[idx];
+                    }
+            } // End Gauss-Seidel loop for the current time step
+
+            // Saving found solution //
+            #pragma omp taskloop
+            for(int i = 0; i <= m; i++)
+                for(int j = 0; j <= m; j++)
+                {
+                    int idx = i*(m+1) + j;
+                    U[t][idx] = U1[idx];
+                }
+
+            //printDataToFile(U[t], m, t*dt);
+        } // Edn time steps loop (inside 'single' directive)
+    }
 
 
     // Saving calculated data for time 'T_final' //
-    //printDataToFile(U[Nt], m, Nt*dt);
+    printDataToFile(U[Nt], m, Nt*dt);
 
     // Deallocating memory //
     for(int t = 0; t <= Nt; t++)
@@ -142,7 +145,7 @@ int main(const int argc, const char ** argv) {
 // Norm is calculated only for internal points
 double norm_L_1(double const * U1, double const * U0, const int m) {
     double norm = 0.0;
-    #pragma omp parallel for shared(U1, U0)
+    #pragma omp parallel for
     for(int i = 1; i < m; i++)
         for(int j = 1; j < m; j++)
         {
@@ -192,7 +195,7 @@ void printDataToFile(double const * U, const int m, const double time) {
     }
 
     const double h = 1.0/m;
-    #pragma omp parallel for shared(U)
+    #pragma omp parallel for
     for(int i = 0; i <= m; i++)
         for(int j = 0; j <= m; j++)
             fprintf(fp, "%lf %lf %lf\n", i*h, j*h, U[i*(m+1) + j]);

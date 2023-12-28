@@ -6,8 +6,7 @@ const double h = 1.0 / m;
 
 const double T_final = 1.0;
 
-const double dt = 0.5 * (h*h/2.0);
-
+//const double dt = 0.5 * (h*h/2.0);
 /*
 int N1 = (int)(T_final/dt);
 int N2 = 0;
@@ -23,6 +22,7 @@ if(fabs(T_final - Nt*dt) > 1e-15)
     fprintf(stderr, "Wrong \'Nt\' calculated for \'m\'=%d\n", m);
 */
 const int Nt = 40000;
+const double dt = 1.0 / Nt;
 
 // Parameters for iterative solution with Gauss-Seidel method
 const int itersLimit = 1000;

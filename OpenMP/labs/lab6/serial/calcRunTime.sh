@@ -22,6 +22,6 @@ end_T=$(date +%s.%N)
 # Output averaged estimation
 totalTime=$(./countFloats.out $end_T "-" $start_T)
 avgExeTime=$(./countFloats.out $totalTime "/" $launchesNumber)
-echo "Estimated execution time (serial): $avgExeTime"
+echo "Average run time (serial m=$1): $avgExeTime"
 rm serial.out
 rm countFloats.out

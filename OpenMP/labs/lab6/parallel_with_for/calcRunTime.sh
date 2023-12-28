@@ -28,6 +28,6 @@ end_T=$(date +%s.%N)
 # Output averaged estimation
 totalTime=$(./countFloats.out $end_T "-" $start_T)
 avgExeTime=$(./countFloats.out $totalTime "/" $launchesNumber)
-echo "Estimated execution time (parallel_for): $avgExeTime"
+echo "Average run time (parallel_for m=$1 OMP_NUM_THREADS=$2): $avgExeTime"
 rm parallel_for.out
 rm countFloats.out
